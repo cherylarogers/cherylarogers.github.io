@@ -36,7 +36,7 @@
   let speciesList = [];
 
   // Load species from AGBnoHeight.csv
-  d3.csv("https://raw.githubusercontent.com/hamidzar/hamidzar.github.io/main/biomass/AGBnoHeight.csv").then(data => {
+  d3.csv("https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/blob/main/biomass/AGBnoHeight.csv").then(data => {
     speciesList = data;
    dropdown.innerHTML = "";
 
@@ -66,8 +66,8 @@ data.forEach(row => {
     const dbh = parseFloat(dbhInput.value) || 0;
 
     const csvUrl = height > 0
-      ? "https://raw.githubusercontent.com/hamidzar/hamidzar.github.io/main/biomass/AGBwithheights.csv"
-      : "https://raw.githubusercontent.com/hamidzar/hamidzar.github.io/main/biomass/AGBnoHeight.csv";
+      ? "https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/blob/main/biomass/AGBwithheights.csv"
+      : "https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/blob/main/biomass/AGBnoHeight.csv";
 
     d3.csv(csvUrl).then(data => {
       const row = data.find(d => d.speciesx === selectedSpecies);
@@ -138,8 +138,8 @@ async function handleBulkUpload() {
     const sheetName = workbook.SheetNames[0];
     const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    const agbNoHeight = await d3.csv("https://raw.githubusercontent.com/hamidzar/hamidzar.github.io/main/biomass/AGBnoHeight.csv");
-    const agbWithHeight = await d3.csv("https://raw.githubusercontent.com/hamidzar/hamidzar.github.io/main/biomass/AGBwithheights.csv");
+    const agbNoHeight = await d3.csv("https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/blob/main/biomass/AGBnoHeight.csv");
+    const agbWithHeight = await d3.csv("https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/blob/main/biomass/AGBwithheights.csv");
 
     let output = "";
 
