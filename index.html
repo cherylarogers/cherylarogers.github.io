@@ -2,364 +2,213 @@
 <html>
 <head>
   <title>Tree Data Processor</title>
+
   <link rel="stylesheet" href="styles.css">
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
+
 <body>
-<a href="https://github.com/Rogers-Environmental-Remote-Sensing-Lab/Biomass" target="_blank" class="help-link">Help and more information on the calculations</a>
- <style>
-  #result {
-    color: black;
-  }
 
-  #bulkResult {
-    color: black;
-  }
-  
-  label {
-    color: black;
-    font-weight: bold; /* optional */
-  }
+<a href="https://github.com/Rogers-Environmental-Remote-Sensing-Lab/Biomass"
+   target="_blank" class="help-link">
+  Help and more information on the calculations
+</a>
 
+<style>
+  #result, #bulkResult { color: black; }
+  label { color: black; font-weight: bold; }
 
   .help-link {
-  position: fixed;
-  top: 15px;
-  right: 20px;
-  font-size: 18px;
-  font-weight: bold;
-  text-decoration: underline;
-  color: #0f100f;
-}
+    position: fixed;
+    top: 15px;
+    right: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    text-decoration: underline;
+    color: #0f100f;
+  }
+</style>
 
-.help-link:hover {
-  text-decoration: underline;
-}
-</style> 
+<!-- ===================================================== -->
+<!-- =============== SINGLE TREE CALCULATOR ============== -->
+<!-- ===================================================== -->
 
 <h2>Biomass Calculator</h2>
-    
+
 <label for="dropdown">Species:</label>
 <select id="dropdown"></select>
 
-<!-- Hidden input section -->
 <div id="inputSection" style="display:none; margin-top: 20px;">
-  <label for="heightInput">Height in Meter:</label>
-  <input type="number" id="heightInput" step="0.01" value="0" />
+  <label>Height (m):</label>
+  <input type="number" id="heightInput" step="0.01" value="0">
 
-  <label for="dbhInput">DBH in Centemeter:</label>
-  <input type="number" id="dbhInput" step="0.01" value="0" />
+  <label>DBH (cm):</label>
+  <input type="number" id="dbhInput" step="0.01" value="0">
 
   <button onclick="calculateBiomass()">Calculate Biomass</button>
 </div>
 
-<p id="result"></p>
-
+<pre id="result"></pre>
 
 <script>
-  const dropdown = document.getElementById("dropdown");
-  const inputSection = document.getElementById("inputSection");
-  const heightInput = document.getElementById("heightInput");
-  const dbhInput = document.getElementById("dbhInput");
-  const resultElement = document.getElementById("result");
+const dropdown = document.getElementById("dropdown");
+const inputSection = document.getElementById("inputSection");
+const heightInput = document.getElementById("heightInput");
+const dbhInput = document.getElementById("dbhInput");
+const resultElement = document.getElementById("result");
 
-  let selectedSpecies = "";
-  let speciesList = [];
+let selectedSpecies = "";
 
-  // Load species from AGBnoHeight.csv
-  d3.csv("https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBnoHeight.csv").then(data => {
-    speciesList = data;
-   dropdown.innerHTML = "";
+// Load species list
+d3.csv(
+  "https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBnoHeight.csv"
+).then(data => {
 
-// Add default placeholder option
-const defaultOption = document.createElement("option");
-defaultOption.text = "Select a species";
-defaultOption.disabled = true;
-defaultOption.selected = true;
-dropdown.appendChild(defaultOption);
+  const defaultOption = document.createElement("option");
+  defaultOption.text = "Select a species";
+  defaultOption.disabled = true;
+  defaultOption.selected = true;
+  dropdown.appendChild(defaultOption);
 
-// Add species options
-data.forEach(row => {
-  const option = document.createElement("option");
-  option.text = row.speciesx;
-  dropdown.appendChild(option);
+  data.forEach(d => {
+    const opt = document.createElement("option");
+    opt.text = d.speciesx;
+    dropdown.appendChild(opt);
+  });
 });
+
+dropdown.addEventListener("change", () => {
+  selectedSpecies = dropdown.value;
+  inputSection.style.display = "block";
+});
+
+function calculateBiomass() {
+
+  const height = parseFloat(heightInput.value) || 0;
+  const dbh = parseFloat(dbhInput.value) || 0;
+
+  const csvUrl = height > 0
+    ? "https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBwithheights.csv"
+    : "https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBnoHeight.csv";
+
+  d3.csv(csvUrl).then(data => {
+
+    const row = data.find(d => d.speciesx === selectedSpecies);
+    if (!row) return;
+
+    let ywood=0,ybark=0,ystem=0,ybranches=0,yfoliage=0,ycrown1=0,ycrown2=0,ytotal=0;
+
+    if (height <= 0) {
+      ywood = +row.estimatebwood1 * (dbh ** +row.estimatebwood2);
+      ybark = +row.estimatebbark1 * (dbh ** +row.estimatebbark2);
+      ybranches = +row.estimatebbranches1 * (dbh ** +row.estimatebbranches2);
+      yfoliage = +row.estimatebfoliage1 * (dbh ** +row.estimatebfoliage2);
+
+      ystem = ywood + ybark;
+      ycrown1 = ybranches + yfoliage;
+      ycrown2 = ystem + ycrown1;
+      ytotal = ycrown2;
+    } else {
+      ywood = +row.estimatebwood1 * (dbh ** +row.estimatebwood2) * (height ** +row.estimatebwood3);
+      ybark = +row.estimatebbark1 * (dbh ** +row.estimatebbark2) * (height ** +row.estimatebbark3);
+      ybranches = +row.estimatebbranches1 * (dbh ** +row.estimatebbranches2) * (height ** +row.estimatebbranches3);
+      yfoliage = +row.estimatebfoliage1 * (dbh ** +row.estimatebfoliage2) * (height ** +row.estimatebfoliage3);
+
+      ystem = ywood + ybark;
+      ycrown1 = ybranches + yfoliage;
+      ytotal = ystem + ycrown1;
+    }
+
+    resultElement.textContent =
+      `ywood: ${ywood.toFixed(6)}\n` +
+      `ybark: ${ybark.toFixed(6)}\n` +
+      `ystem: ${ystem.toFixed(6)}\n` +
+      `ybranches: ${ybranches.toFixed(6)}\n` +
+      `yfoliage: ${yfoliage.toFixed(6)}\n` +
+      `ycrown1: ${ycrown1.toFixed(6)}\n` +
+      `ycrown2: ${ycrown2.toFixed(6)}\n` +
+      `ytotal: ${ytotal.toFixed(6)}`;
   });
-
-  // Show inputs after species is selected
-  dropdown.addEventListener("change", () => {
-    selectedSpecies = dropdown.value;
-    inputSection.style.display = "block";
-  });
-
-  function calculateBiomass() {
-    const height = parseFloat(heightInput.value) || 0;
-    const dbh = parseFloat(dbhInput.value) || 0;
-
-    const csvUrl = height > 0
-      ? "https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBwithheights.csv"
-      : "https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBnoHeight.csv";
-
-    d3.csv(csvUrl).then(data => {
-      const row = data.find(d => d.speciesx === selectedSpecies);
-      if (!row) {
-        resultElement.innerText = "Species not found.";
-        return;
-      }
-
-      let ywood = 0, ybark = 0, ystem = 0, ybranches = 0, yfoliage = 0, ycrown1 = 0, ycrown2 = 0, ytotal = 0;
-
-      if (height === 0 && dbh > 0) {
-        ywood = parseFloat(row.estimatebwood1) * (dbh ** parseFloat(row.estimatebwood2));
-        ybark = parseFloat(row.estimatebbark1) * (dbh ** parseFloat(row.estimatebbark2));
-        ystem = ywood + ybark;
-        ybranches = parseFloat(row.estimatebbranches1) * (dbh ** parseFloat(row.estimatebbranches2));
-        yfoliage = parseFloat(row.estimatebfoliage1) * (dbh ** parseFloat(row.estimatebfoliage2));
-        ycrown1 = yfoliage + ybranches;
-        ycrown2 = ywood + ybark + yfoliage + ybranches;
-        ytotal = ywood + ybark + ybranches + yfoliage;
-      }
-
-      if (height > 0 && dbh > 0) {
-        ywood = parseFloat(row.estimatebwood1) * (dbh ** parseFloat(row.estimatebwood2)) * (height ** parseFloat(row.estimatebwood3));
-        ybark = parseFloat(row.estimatebbark1) * (dbh ** parseFloat(row.estimatebbark2)) * (height ** parseFloat(row.estimatebbark3));
-        ystem = ywood + ybark;
-        ybranches = parseFloat(row.estimatebbranches1) * (dbh ** parseFloat(row.estimatebbranches2)) * (height ** parseFloat(row.estimatebbranches3));
-        yfoliage = parseFloat(row.estimatebfoliage1) * (dbh ** parseFloat(row.estimatebfoliage2)) * (height ** parseFloat(row.estimatebfoliage3));
-        ycrown1 = yfoliage + ybranches;
-        ycrown2 = 0;
-        ytotal = ywood + ybark + ybranches + yfoliage;
-      }
-
-      resultElement.innerText =
-        `Species: ${selectedSpecies}\n` +
-        `Height: ${height}\n` +
-        `DBH: ${dbh}\n` +
-        `ywood: ${ywood.toFixed(6)}\n` +
-        `ybark: ${ybark.toFixed(6)}\n` +
-        `ystem: ${ystem.toFixed(6)}\n` +
-        `ybranches: ${ybranches.toFixed(6)}\n` +
-        `yfoliage: ${yfoliage.toFixed(6)}\n` +
-        `ycrown1: ${ycrown1.toFixed(6)}\n` +
-        `ycrown2: ${ycrown2.toFixed(6)}\n` +
-        `ytotal: ${ytotal.toFixed(6)}`;
-    });
-  }
+}
 </script>
 
-
-
 <hr>
-<h3>Bulk Upload (CSV or Excel)</h3>
-<h3>With three columns: species | height | DBH</h3>
-<input type="file" id="bulkFileInput" accept=".csv, .xlsx, .xls" />
 
+<!-- ===================================================== -->
+<!-- ================= BULK EXCEL PROCESSOR ============== -->
+<!-- ===================================================== -->
 
+<h3>Bulk Upload (Excel)</h3>
 
+<input type="file" id="bulkFileInput" accept=".xlsx,.xls">
+<button onclick="processFile()">Process File</button>
 
-<button onclick="handleBulkUpload()">Process File</button>
-<pre id="bulkResult" style="white-space: pre-wrap; margin-top: 10px;"></pre>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-
+<pre id="bulkResult"></pre>
 
 <script>
+async function processFile() {
 
-  async function handleBulkUpload() {
-  const fileInput = document.getElementById("bulkFileInput");
-  const bulkResult = document.getElementById("bulkResult");
-  const file = fileInput.files[0];
-  if (!file) return alert("Please select a file.");
+  const file = document.getElementById("bulkFileInput").files[0];
+  if (!file) return;
+
+  const agbNoHeight = await d3.csv(
+    "https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBnoHeight.csv"
+  );
+  const agbWithHeight = await d3.csv(
+    "https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBwithheights.csv"
+  );
 
   const reader = new FileReader();
-  reader.onload = async (e) => {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: "array" });
-    const sheetName = workbook.SheetNames[0];
-    // Read sheet as raw array (each row = array of cells)
-const raw = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+  reader.onload = e => {
 
-// Required columns (case-insensitive)
-const requiredCols = ["species", "height", "dbh"];
+    const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+    const wsName = wb.SheetNames[0];
+    const raw = XLSX.utils.sheet_to_json(wb.Sheets[wsName], { header: 1, defval: "" });
 
-// Function to normalize text
-const norm = (x) => String(x).toLowerCase().trim();
+    // Headers row 15
+    raw[14] = raw[14] || [];
+    ["ywood","ybark","ystem","ybranches","yfoliage","ycrown1","ycrown2","ytotal"]
+      .forEach((h,i)=> raw[14][5+i]=h);
 
-// Find the correct header row
-let headerRowIndex = raw.findIndex(row => {
-  const normalized = row.map(norm);
-  return requiredCols.every(col => normalized.includes(col));
-});
+    for (let r=15; r<raw.length; r++) {
 
-if (headerRowIndex === -1) {
-  alert("No valid header row found. Sheet must include: species, height, DBH.");
-  return;
-}
+      const species = String(raw[r][2]||"").trim();
+      const height = parseFloat(raw[r][3]||0);
+      const dbh = parseFloat(raw[r][4]||0);
+      if (!species || dbh<=0) continue;
 
-const headerRow = raw[headerRowIndex].map(norm);
+      const clean=s=>s.toLowerCase().trim();
+      const src = height>0 ? agbWithHeight : agbNoHeight;
+      const m = src.find(d=>clean(d.speciesx)===clean(species));
+      if (!m) continue;
 
-// Map each required column to its actual index
-const colIndex = {};
-requiredCols.forEach(col => {
-  colIndex[col] = headerRow.indexOf(col);
-});
-
-// Build JSON rows using column indices (handles shifted columns)
-const rows = raw.slice(headerRowIndex + 1).map(row => {
-  return {
-    species: row[colIndex["species"]],
-    height: row[colIndex["height"]],
-    dbh: row[colIndex["dbh"]],
-  };
-});
-
-
-    const agbNoHeight = await d3.csv("https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBnoHeight.csv");
-    const agbWithHeight = await d3.csv("https://raw.githubusercontent.com/cherylarogers/cherylarogers.github.io/main/biomass/AGBwithheights.csv");
-
-    let output = "";
-
-    rows.forEach((row, index) => {
-      const species = (row.species ?? row.Species ?? "").trim();
-
-      const height = parseFloat(row.Height ?? row.height ?? "0");
-      const dbh = parseFloat(row.DBH ?? row.dbh ?? "0");
-
-
-      if (!species || isNaN(height) || isNaN(dbh) || height < 0 || dbh <= 0) {
-        output += `Row ${index + 2}: The record does not have right information.\n`;
-        return;
+      let ywood,ybark,ybranches,yfoliage;
+      if (height<=0) {
+        ywood = +m.estimatebwood1*(dbh**+m.estimatebwood2);
+        ybark = +m.estimatebbark1*(dbh**+m.estimatebbark2);
+        ybranches = +m.estimatebbranches1*(dbh**+m.estimatebbranches2);
+        yfoliage = +m.estimatebfoliage1*(dbh**+m.estimatebfoliage2);
+      } else {
+        ywood = +m.estimatebwood1*(dbh**+m.estimatebwood2)*(height**+m.estimatebwood3);
+        ybark = +m.estimatebbark1*(dbh**+m.estimatebbark2)*(height**+m.estimatebbark3);
+        ybranches = +m.estimatebbranches1*(dbh**+m.estimatebbranches2)*(height**+m.estimatebbranches3);
+        yfoliage = +m.estimatebfoliage1*(dbh**+m.estimatebfoliage2)*(height**+m.estimatebfoliage3);
       }
 
-      let match = null;
-      let ywood = 0, ybark = 0, ystem = 0, ybranches = 0, yfoliage = 0, ycrown1 = 0, ycrown2 = 0, ytotal = 0;
+      const ystem=ywood+ybark, ycrown1=ybranches+yfoliage, ytotal=ystem+ycrown1;
 
-      if (height === 0) {
-        match = agbNoHeight.find(
-        d => d.speciesx.trim().toLowerCase() === species.toLowerCase());
-        if (!match) {
-          output += `Row ${index + 2}: Species "${species}" not found in AGBnoHeight dataset.\n`;
-          return;
-        }
+      [ywood,ybark,ystem,ybranches,yfoliage,ycrown1,"",ytotal]
+        .forEach((v,i)=> raw[r][5+i]=typeof v==="number"?v.toFixed(6):"");
+    }
 
-        ywood = parseFloat(match.estimatebwood1) * (dbh ** parseFloat(match.estimatebwood2));
-        ybark = parseFloat(match.estimatebbark1) * (dbh ** parseFloat(match.estimatebbark2));
-        ystem = ywood + ybark;
-        ybranches = parseFloat(match.estimatebbranches1) * (dbh ** parseFloat(match.estimatebbranches2));
-        yfoliage = parseFloat(match.estimatebfoliage1) * (dbh ** parseFloat(match.estimatebfoliage2));
-        ycrown1 = yfoliage + ybranches;
-        ycrown2 = ywood + ybark + ybranches + yfoliage;
-        ytotal = ywood + ybark + ybranches + yfoliage;
-      }
-
-      if (height > 0) {
-        match = agbWithHeight.find(
-        d => d.speciesx.trim().toLowerCase() === species.toLowerCase());
-        if (!match) {
-          output += `Row ${index + 2}: Species "${species}" not found in AGBwithheights dataset.\n`;
-          return;
-        }
-
-        ywood = parseFloat(match.estimatebwood1) * (dbh ** parseFloat(match.estimatebwood2)) * (height ** parseFloat(match.estimatebwood3));
-        ybark = parseFloat(match.estimatebbark1) * (dbh ** parseFloat(match.estimatebbark2)) * (height ** parseFloat(match.estimatebbark3));
-        ystem = ywood + ybark;
-        ybranches = parseFloat(match.estimatebbranches1) * (dbh ** parseFloat(match.estimatebbranches2)) * (height ** parseFloat(match.estimatebbranches3));
-        yfoliage = parseFloat(match.estimatebfoliage1) * (dbh ** parseFloat(match.estimatebfoliage2)) * (height ** parseFloat(match.estimatebfoliage3));
-        ycrown1 = yfoliage + ybranches;
-        ycrown2 = 0;
-        ytotal = ywood + ybark + ybranches + yfoliage;
-      }
-
-      output += `Row ${index + 2} [${species}]:\n` +
-                `  ywood: ${ywood.toFixed(6)}\n` +
-                `  ybark: ${ybark.toFixed(6)}\n` +
-                `  ystem: ${ystem.toFixed(6)}\n` +
-                `  ybranches: ${ybranches.toFixed(6)}\n` +
-                `  yfoliage: ${yfoliage.toFixed(6)}\n` +
-                `  ycrown1: ${ycrown1.toFixed(6)}\n` +
-                `  ycrown2: ${ycrown2.toFixed(6)}\n` +
-                `  ytotal: ${ytotal.toFixed(6)}\n\n`;
-    });
-
-    bulkResult.innerText = output;
-
-    
-    // Export output to CSV file
-   
-
-// Build proper rows for Excel
-let excelData = [];
-
-// Loop through rows and calculate biomass for Excel at the same time
-rows.forEach((row, index) => {
-  const species = (row.species ?? row.Species ?? "").trim();
-  const height = parseFloat(row.Height ?? row.height ?? "0");
-  const dbh = parseFloat(row.DBH ?? row.dbh ?? "0");
-
-  let match = null;
-  let ywood = 0, ybark = 0, ystem = 0, ybranches = 0, yfoliage = 0, ycrown1 = 0, ycrown2 = 0, ytotal = 0;
-
-  if (!species || isNaN(height) || isNaN(dbh) || height < 0 || dbh <= 0) {
-    return; // skip invalid rows
-  }
-
-  if (height === 0) {
-    match = agbNoHeight.find(d => d.speciesx.trim().toLowerCase() === species.toLowerCase());
-    if (!match) return;
-
-    ywood = parseFloat(match.estimatebwood1) * (dbh ** parseFloat(match.estimatebwood2));
-    ybark = parseFloat(match.estimatebbark1) * (dbh ** parseFloat(match.estimatebbark2));
-    ystem = ywood + ybark;
-    ybranches = parseFloat(match.estimatebbranches1) * (dbh ** parseFloat(match.estimatebbranches2));
-    yfoliage = parseFloat(match.estimatebfoliage1) * (dbh ** parseFloat(match.estimatebfoliage2));
-    ycrown1 = yfoliage + ybranches;
-    ycrown2 = ywood + ybark + ybranches + yfoliage;
-    ytotal = ywood + ybark + ybranches + yfoliage;
-  }
-
-  if (height > 0) {
-    match = agbWithHeight.find(d => d.speciesx.trim().toLowerCase() === species.toLowerCase());
-    if (!match) return;
-
-    ywood = parseFloat(match.estimatebwood1) * (dbh ** parseFloat(match.estimatebwood2)) * (height ** parseFloat(match.estimatebwood3));
-    ybark = parseFloat(match.estimatebbark1) * (dbh ** parseFloat(match.estimatebbark2)) * (height ** parseFloat(match.estimatebbark3));
-    ystem = ywood + ybark;
-    ybranches = parseFloat(match.estimatebbranches1) * (dbh ** parseFloat(match.estimatebbranches2)) * (height ** parseFloat(match.estimatebbranches3));
-    yfoliage = parseFloat(match.estimatebfoliage1) * (dbh ** parseFloat(match.estimatebfoliage2)) * (height ** parseFloat(match.estimatebfoliage3));
-    ycrown1 = yfoliage + ybranches;
-    ycrown2 = 0;
-    ytotal = ywood + ybark + ybranches + yfoliage;
-  }
-
-  excelData.push({
-    species,
-    height,
-    dbh,
-    ywood: ywood.toFixed(6),
-    ybark: ybark.toFixed(6),
-    ystem: ystem.toFixed(6),
-    ybranches: ybranches.toFixed(6),
-    yfoliage: yfoliage.toFixed(6),
-    ycrown1: ycrown1.toFixed(6),
-    ycrown2: ycrown2.toFixed(6),
-    ytotal: ytotal.toFixed(6)
-  });
-});
-
-// Generate Excel workbook and download
-const ws = XLSX.utils.json_to_sheet(excelData);
-const wb = XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(wb, ws, "Biomass Output");
-XLSX.writeFile(wb, "biomass_bulk_output.xlsx");
-
-
-   
-
+    wb.Sheets[wsName]=XLSX.utils.aoa_to_sheet(raw);
+    XLSX.writeFile(wb,file.name);
+    document.getElementById("bulkResult").textContent="Bulk processing complete ✔";
   };
 
   reader.readAsArrayBuffer(file);
-} 
+}
 </script>
 
 </body>
